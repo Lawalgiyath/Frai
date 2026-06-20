@@ -231,16 +231,34 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (deadlinePassed()) { closeApplications(); return; }
-      const input = form.querySelector('input[name="email"]');
-      const email = input.value.trim();
+      const emailInput = form.querySelector('input[name="email"]');
+      const phoneInput = form.querySelector('input[name="phone"]');
+      const email = emailInput ? emailInput.value.trim() : "";
+      const phone = phoneInput ? phoneInput.value.trim() : "";
+      
+      // Reset any previous error states
+      if (emailInput) emailInput.style.boxShadow = "";
+      if (phoneInput) phoneInput.style.boxShadow = "";
+
       if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-        input.focus();
-        input.style.boxShadow = "inset 0 0 0 2px var(--vermilion)";
+        if (emailInput) {
+          emailInput.focus();
+          emailInput.style.boxShadow = "inset 0 0 0 2px var(--vermilion)";
+        }
         return;
       }
+      
+      if (!phone) {
+        if (phoneInput) {
+          phoneInput.focus();
+          phoneInput.style.boxShadow = "inset 0 0 0 2px var(--vermilion)";
+        }
+        return;
+      }
+
       const restore = lockBtn(form.querySelector("button"), "Saving…");
       try {
-        await submit({ type: "waitlist", email });
+        await submit({ type: "waitlist", email, phone });
         form.innerHTML =
           '<div class="chip" style="background:var(--ink);color:var(--paper);border-color:var(--ink);font-size:var(--t-sm);padding:.7rem 1rem"><span class="dot"></span> Seat saved, check your inbox. Now make it count: <a href="#apply" style="color:var(--amber);text-decoration:underline;margin-left:.3rem">apply →</a></div>';
       } catch (err) {
