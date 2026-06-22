@@ -5,96 +5,23 @@
 (function () {
   "use strict";
 
-  /* -------- CONFIG: edit these for your real launch -------- */
+  /* -------- CONFIG: edit these for your real studio limits -------- */
   const CONFIG = {
-    // Real deadline = honest countdown (research: fake timers kill trust).
-    // Applications close end of day July 1, 2026 (local time). After this the
-    // countdown shows "closed" AND both forms stop accepting submissions.
-    applicationsCloseISO: "2026-07-01T23:59:59",
-
-    // Seats. Counter is shown as social proof, kept static on purpose.
-    totalSeats: 30,
-    seatsLeft: 9,
+    // Client slots available for the current month.
+    totalSlots: 4,
+    slotsLeft: 1,
 
     // Where form submissions go (Formspree). Leave null to run in "demo /
     // no-backend" mode (submissions are logged + stored locally).
     endpoint: "https://formspree.io/f/xbdpoplj",
   };
 
-  // True once the application deadline has passed.
-  const deadlinePassed = () =>
-    Date.now() > new Date(CONFIG.applicationsCloseISO).getTime();
-
   /* ----------------------- helpers ----------------------- */
   const $  = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-  const pad = (n) => String(n).padStart(2, "0");
 
-  /* ------- close applications once the deadline passes ------- */
-  let applicationsClosed = false;
-  function closeApplications() {
-    if (applicationsClosed) return;
-    applicationsClosed = true;
-
-    // Hero email capture → swap for a closed notice.
-    const capture = $("#capture-form");
-    if (capture && !capture.dataset.done) {
-      capture.innerHTML =
-        '<div class="chip" style="background:var(--ink);color:var(--paper);border-color:var(--ink);font-size:var(--t-sm);padding:.7rem 1rem"><span class="dot"></span> Applications for Cohort 01 are closed.</div>';
-    }
-
-    // Application form → disable inputs + button, show closed message.
-    const apply = $("#apply-form");
-    if (apply && !apply.classList.contains("hide")) {
-      apply.querySelectorAll("input, textarea, select, button").forEach((el) => {
-        el.disabled = true;
-        el.style.opacity = ".55";
-        el.style.cursor = "not-allowed";
-      });
-      const msg = $("#apply-msg");
-      if (msg) {
-        msg.textContent =
-          "Applications for Cohort 01 closed on July 1. Cohort 02 opens later, check back soon.";
-        msg.classList.add("show", "err");
-      }
-    }
-  }
-
-  /* ----------------------- seats ------------------------- */
-  $$("[data-spots-left]").forEach((el) => (el.textContent = CONFIG.seatsLeft));
-
-  /* --------------------- countdown ----------------------- */
-  (function countdown() {
-    const target = new Date(CONFIG.applicationsCloseISO).getTime();
-    const cells = {
-      days:  $('[data-cd="days"]'),
-      hours: $('[data-cd="hours"]'),
-      mins:  $('[data-cd="mins"]'),
-      secs:  $('[data-cd="secs"]'),
-    };
-    if (!cells.days) return;
-
-    function tick() {
-      const diff = target - Date.now();
-      if (diff <= 0) {
-        Object.values(cells).forEach((c) => (c.textContent = "00"));
-        const lbl = $(".countdown__lbl");
-        if (lbl) lbl.textContent = "Applications closed, join the next intake";
-        closeApplications();
-        return;
-      }
-      const d = Math.floor(diff / 864e5);
-      const h = Math.floor((diff % 864e5) / 36e5);
-      const m = Math.floor((diff % 36e5) / 6e4);
-      const s = Math.floor((diff % 6e4) / 1e3);
-      cells.days.textContent  = pad(d);
-      cells.hours.textContent = pad(h);
-      cells.mins.textContent  = pad(m);
-      cells.secs.textContent  = pad(s);
-    }
-    tick();
-    setInterval(tick, 1000);
-  })();
+  /* ----------------------- slots left ------------------------- */
+  $$("[data-slots-left]").forEach((el) => (el.textContent = CONFIG.slotsLeft));
 
   /* -------------------- scroll reveal -------------------- */
   (function reveal() {
@@ -230,7 +157,6 @@
     if (!form) return;
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (deadlinePassed()) { closeApplications(); return; }
       const emailInput = form.querySelector('input[name="email"]');
       const phoneInput = form.querySelector('input[name="phone"]');
       const email = emailInput ? emailInput.value.trim() : "";
@@ -256,11 +182,11 @@
         return;
       }
 
-      const restore = lockBtn(form.querySelector("button"), "Saving…");
+      const restore = lockBtn(form.querySelector("button"), "Sending…");
       try {
-        await submit({ type: "waitlist", email, phone });
+        await submit({ type: "consultation_request", email, phone });
         form.innerHTML =
-          '<div class="chip" style="background:var(--ink);color:var(--paper);border-color:var(--ink);font-size:var(--t-sm);padding:.7rem 1rem"><span class="dot"></span> Seat saved, check your inbox. Now make it count: <a href="#apply" style="color:var(--amber);text-decoration:underline;margin-left:.3rem">apply →</a></div>';
+          '<div class="chip" style="background:var(--ink);color:var(--paper);border-color:var(--ink);font-size:var(--t-sm);padding:.7rem 1rem"><span class="dot"></span> Request received! We will reach out shortly. <a href="#apply" style="color:var(--amber);text-decoration:underline;margin-left:.3rem">Fill detail brief →</a></div>';
       } catch (err) {
         restore();
         alert("Something went wrong. Please try again.");
@@ -277,7 +203,6 @@
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (deadlinePassed()) { closeApplications(); return; }
       msg.className = "form__msg";
 
       const data = Object.fromEntries(new FormData(form).entries());
@@ -299,7 +224,7 @@
 
       const restore = lockBtn(form.querySelector("button[type=submit]"), "Submitting…");
       try {
-        await submit({ type: "application", ...data });
+        await submit({ type: "proposal_request", ...data });
         form.classList.add("hide");
         if (success) {
           success.classList.add("show");
